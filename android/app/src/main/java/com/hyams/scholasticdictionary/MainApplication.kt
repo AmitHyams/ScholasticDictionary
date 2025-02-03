@@ -1,4 +1,4 @@
-package com.scholasticdictionary
+package com.hyams.scholasticdictionary
 
 import android.app.Application
 import android.content.res.Configuration

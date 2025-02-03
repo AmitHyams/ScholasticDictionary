@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, Text, TextInput, Button, View, ScrollView, SafeAreaView, Alert, Animated, TouchableOpacity, PixelRatio } from 'react-native';
 import { useState, useEffect } from "react";
+import { useFonts } from "expo-font";
 
 export default function App() {
   const [word, setWord] = useState('Example');
@@ -11,6 +12,10 @@ export default function App() {
   const [error, setError] = useState('');
   const [history, setHistory] = useState([]);
   
+  const [fontsLoaded] = useFonts({
+    "Garamond": require("./assets/fonts/EBGaramond-VariableFont_wght.ttf"),
+  });
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -19,16 +24,15 @@ export default function App() {
     };
 
     fetchData();
-  }, []); // Empty array makes this run only once on mount
+  }, []); 
 
-
-
-  const submit = () => {
-    if(word != ""){
+  const submit = (w) => {
+    if(w != ""){
+      setWord(w);
       if(flipped){
         flip();
       }
-      fetchDefinition();
+      fetchDefinition(w);
     }else{
       setWData(null);
     }
@@ -92,20 +96,21 @@ export default function App() {
   });
 
 
-  const fetchDefinition = async () => {
+  const fetchDefinition = async (w) => {
     try {
-      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
       const data = await response.json();
-      
+      setWord(w);
       if (data.title === "No Definitions Found") {
-        setError('No definitions found for the word.');
+        //setError('No definitions found for the word.');
+        setWord('No definitions found for the word.');
         setWData(null);
         setDefinition(null);
-      } else {
+      } else if(w !== '' && w !== null && w !== 'Example') {
         setWData(data);
         if(!history.includes(word)){
           setHistory([...history,word]);
-          saveArray[history];
+          saveArray(history);
         }
         setDefinition(data[0].meanings[0].definitions[0].definition);
         setError('');
@@ -116,6 +121,19 @@ export default function App() {
     }
     setLoading(false);
   };
+
+  const quiz = () => {
+     const randomNW = Math.floor(Math.random() * history.length);
+     setWord(history[randomNW]);
+     submit(history[randomNW]);
+  };
+
+  const removeWfromH = (i) =>{
+    setHistory(history => history.filter(curWord => curWord !== i));
+    saveArray(history);
+    setWord('Example');
+    setWData(null);
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,12 +160,16 @@ export default function App() {
         <TextInput
           onChangeText = {setWord}
           placeholder = "Enter New Word"
-          onSubmitEditing = {submit}
-          Value = {word}
+          onSubmitEditing = {() => {submit(word)}}
+          Value = {word} 
+          style={styles.btext}
           onFocus = {handleFocus}
           onBlur = {handleBlur}
         />
-        <Text>Previous Words</Text>
+        <TouchableOpacity onPress={() => {quiz()}} style={styles.used}>
+          <Text style={styles.btext}>quiz me!</Text>
+        </TouchableOpacity>
+        <Text style={styles.btext}>Previous Words</Text>
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="automatic" >
           {
             history !== null &&
@@ -155,9 +177,12 @@ export default function App() {
               return(
                 <TouchableOpacity key={index} onPress={() => {
                   setWord(w);
-                  submit();
-                }} style={styles.used}>
-                  <Text>{w}</Text>
+                  submit(w);
+                }} 
+                onLongPress={() => {removeWfromH(w)}}
+                delayLongPress={1000}
+                style={styles.used}>
+                  <Text style={styles.btext}>{w}</Text>
                 </TouchableOpacity>
               );
               //Alert.alert("word",w);
@@ -176,15 +201,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize:20,
     fontWeight: 'bold',
+    color: '#FCE7C8',
+    fontFamily: 'Garamond'
   },
   phon: {
     fontSize:15,
     fontWeight: 'bold',
   },
+  btext: {
+    color: '#F0A04B',
+    fontSize:17,
+    fontFamily: 'Garamond'
+  },
   container: {
     marginTop:StatusBar.currentHeight,
     flex: 1,
-    backgroundColor: '#fbf7f5',
+    backgroundColor: '#FCE7C8',
     alignItems: 'center',
     justifyContent: 'top',
   },
@@ -195,7 +227,7 @@ const styles = StyleSheet.create({
     padding: 10 * scale,
     width: 130 * scale,
     height: 150 * scale, // Adjust the height for visibility of front and back
-    backgroundColor: '#3498db',
+    backgroundColor: '#B1C29E',
     borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -215,12 +247,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   front: {
-    backgroundColor: '#ddd',
+    //backgroundColor: '#3498db',
     // Additional styling for the front face
     backfaceVisibility: 'hidden', // Hide the back face when not flipped
   },
   back: {
-    backgroundColor: '#f7b7b7',
+    backgroundColor: '#FADA7A',
     transform: [{ rotateY: '180deg' }], // Rotate the back face by 180deg to show it when flipped
     justifyContent: 'center',
     alignItems: 'center',
@@ -231,7 +263,7 @@ const styles = StyleSheet.create({
     margin:10 * scale,
     width: 90 * scale,
     height: 10 * scale,
-    backgroundColor: '#fbf7f5',
+    backgroundColor: '#FCE7C8',
     borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
@@ -246,7 +278,7 @@ const styles = StyleSheet.create({
     marginTop: 5 * scale,
     padding: 1 * scale,
     width: '90%',
-    backgroundColor: '#fbf7f5',
+    backgroundColor: '#FCE7C8',
     borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
